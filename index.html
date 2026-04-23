@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attestatsiya Savol-Javob</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #0f172a; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 10px;
+        }
+
+        .search-container { margin-bottom: 15px; }
+        .search-box {
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: white;
+            width: 150px;
+            text-align: center;
+        }
+
+        .counter { font-size: 14px; color: #94a3b8; margin-bottom: 10px; }
+
+        .card-container { 
+            width: 320px; 
+            height: 220px; 
+            perspective: 1000px; 
+            cursor: pointer; 
+        }
+
+        .card { 
+            width: 100%; 
+            height: 100%; 
+            position: relative; 
+            transition: transform 0.5s; 
+            transform-style: preserve-3d; 
+        }
+
+        .card.flipped { transform: rotateY(180deg); }
+
+        .front, .back { 
+            position: absolute; 
+            width: 100%; 
+            height: 100%; 
+            backface-visibility: hidden; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+            border-radius: 20px; 
+            text-align: center; 
+            font-size: 16px; 
+            box-sizing: border-box;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .front { background: #1e293b; border: 1px solid #38bdf8; }
+        .back { background: #0ea5e9; color: white; transform: rotateY(180deg); font-weight: bold; }
+
+        .controls { margin-top: 30px; display: flex; gap: 10px; }
+
+        button { 
+            padding: 12px 25px; 
+            border: none; 
+            border-radius: 10px; 
+            background: #38bdf8; 
+            color: #0f172a; 
+            font-weight: bold; 
+            cursor: pointer; 
+            font-size: 14px;
+        }
+
+        button:hover { background: #7dd3fc; }
+        .hint { font-size: 12px; color: #64748b; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="search-container">
+        <input type="number" id="qNum" class="search-box" placeholder="Savol №" oninput="jumpTo()">
+    </div>
+
+    <div class="counter" id="counter">Savol: 1 / 200</div>
+    
+    <div class="card-container" onclick="flipCard()">
+        <div class="card" id="card">
+            <div class="front" id="question">Yuklanmoqda...</div>
+            <div class="back" id="answer">Yuklanmoqda...</div>
+        </div>
+    </div>
+
+    <div class="hint">Javobni ko'rish uchun kartochkani bosing</div>
+
+    <div class="controls">
+        <button onclick="prev()">⬅️ Oldingi</button>
+        <button onclick="next()">Keyingi ➡️</button>
+    </div>
+
+    <script>
+        const data = [
+            {q: "Qadimgi sharq xalqlari ilk sivilizatsiya davrini ko‘rsating", a: "mil av.4. m.y."},
+            {q: "Qadimgi tangashunoslikni o‘rganadigan fan sohasi.", a: "numizmatika"},
+            {q: "Dastlatki yozuv qanday nomlangan?", a: "iroglif"},
+            {q: "Misrda birinchi bo‘lib sulolalar dekadasini yaratgan shaxs kim bo‘lgan.?", a: "Manefon"},
+            {q: "Geradot qaysi Ossur podshosi haqida Misrga qo‘shin tortib borganligini mufassal tasvirlagan?", a: "Sinaxreb."},
+            {q: "“Tarix kutubxonasi” asarining muallifini ko‘rsating.", a: "Diodor"},
+            {q: "Strabonning eng yirik asarrini ko`rsating.", a: "“Geografiya”"},
+            {q: "Mixsimon xatlarning nusxalarini birinchi marta Yevropaga olib ketgan sayyohni ko`rsating.", a: "Petro della Valle"},
+            {q: "Misrda Ilk podsholik asoschisi.", a: "Menua"},
+            {q: "Misrliklar yozuvni qanday nomlashgan?", a: "muqaddas bitik."},
+            {q: "Misrda nechanchi suloladan boshlab Ra xudosiga bag‘ishlab ibodatxonalar qurish kuchaydi?", a: "V sulola"},
+            {q: "Rozetta bitik toshi J.Shampaleon tomonidan qachon o‘rganilgan?", a: "1825-y"},
+            {q: "Qadimgi podsholik davrida podsholarga qanday unvonlar berilgan?", a: "“Ulug` xudo”, “Xushbaxt xudo”"},
+            {q: "Qaysi podsho davrida yer haydash, o`rim – terim, ov qilish va toshtaroshlik ishlarida aholidan majburiy mehnatda foydalish man qilingan.", a: "Noferirkara"},
+            {q: "Misrda qadimgi podsholik davrining yemirilish sababini ko`rsating.", a: "nomlarga bo`linib ketishi"},
+            {q: "Qaysi hukmdor davrida Abidosdagi Xentiamentiu ibodatxonasi hamma soliq majburiyatlaridan ozod qilingan.", a: "Noferirkara"},
+            {q: "Misr janubda qayer bilan chegaradosh?", a: "Nubiya"},
+            {q: "Qaysi podsholik davrida poytaxt Fiva bo`lgan?", a: "o`rta podsholikda"},
+            {q: "Mis qayerdan qazib olingan?", a: "Sinay yarim orolidan"},
+            {q: "Qaysi podsholik davrida Nubiyaning shimoli bosib olindi", a: "o`rta podsholik"},
+            {q: "Misr va Suriya o`rtasidagi savdo aloqalarining mustahkamlanib borilganligi haqida qaysi manbada hikoya qilinadi.", a: "“Sinuxet hikoyasi”"},
+            {q: "Firavn Sinusert III hukmronlik qilgan yillarni ko`rsating.", a: "mil. av. 1887 – 1849 yy"},
+            {q: "Nubiyaning homiy xudosi kim bo`lgan?", a: "mabuda Anuket"},
+            {q: "“Ipuver nasihatnomasi” qaysi muzeyda saqlanmoqda.", a: "Leyden (faylda: Britaniya namunada bo'lishi mumkin, lekin darslikda Leyden)"},
+            {q: "Yangi podsholik asoschisi kim edi?", a: "Yaxmos"},
+            {q: "Misr qachon yana yagona davlatga birlashdi?", a: "mil. avv. VII asr"},
+            {q: "Geleopalda qaysi xudoning ibodatxonasi bo`lgan?", a: "Ra"},
+            {q: "Misrliklar hayotidagi birlamchi xudo?", a: "Osiris"},
+            {q: "“Sizlarning fikrlaringiz noto`g`ri, baribir men osiyolilar bilan jang qilaman”", a: "Kamos"},
+            {q: "Giksoslar ustidan uzil - kesil g`alaba qozongan podshoni ko`rsating", a: "Yaxmos I"},
+            {q: "Yaxmos I nechinchi sulolaga asos solgan?", a: "XVIII sulola"},
+            {q: "Yangi podsholik davrida Misrga temir qayerdan olib kelingan?", a: "Kichik osiyodan"},
+            {q: "Qaysi xudo Misr xalqini dehqonchilikka o`rgatgan?", a: "Osiris"},
+            {q: "Abidos shahrida qaysi xudoning ibodatxonasi bo`lgan?", a: "Osiris"},
+            {q: "Falastinni bosib olgan Misr fir`avni?", a: "Tutmos III"},
+            {q: "Xudo Amon-Ra qaysi hukumdor davrida isloh qilingan?", a: "Exnaton"},
+            {q: "“Mirzalar maktabi” misr tilida qanday nomlangan?", a: "“per anx”"},
+            {q: "Misrda so`nggi podsholik yana qanday nom bilan ataladi?", a: "Liviya – Sais davri"},
+            {q: "VIII asrda qaysi Ossur podshosi tomonidan egallangan?", a: "Ashshurbanipal"},
+            {q: "Mil. av 605 – yilda qaysi Bobil podshosi Misrdan Suriya va Falastinni qaytarib olgan?", a: "Navoxudonosor II"},
+            {q: "Mesopatamiya so‘zining ma’nosi.", a: "ikki daryo oralig‘i"},
+            {q: "Eng dastlabki shahar-davlatlarni ko‘rsating.", a: "shumer"},
+            {q: "Eng birinchi yuksalgan shumer shahrini ko‘rsating.", a: "Kish"},
+            {q: "Akkadning eng qudratli podshosi kim bo‘lgan?", a: "Sargon"},
+            {q: "“Lugal” so`zining ma`nosi?", a: "“Ulug` odam”"},
+            {q: "Jemdet – Nasr madaniyati qaysi hududda bo`lgan?", a: "Shummerda"},
+            {q: "Aholi o`troqlashishi qaysi madaniy qatlamda aniqlangan?", a: "Al – Obeid madaniyati"},
+            {q: "Sargon I hukmronlik qilgan yillarni ko`rsating.", a: "mil. av 2316 – 2261 yy"},
+            {q: "Bobil so‘zining ma’nosi.", a: "xudolar darvozasi"},
+            {q: "Bobil tarixi nechiga bo‘linadi ?", a: "3 davrga"},
+            {q: "Rivojlangan o‘rta asrlar qaysi davrlarni o’z ichiga oladi?", a: "XI asr o‘rtalaridan - XV asr oxirigacha"},
+            {q: "So‘nggi o‘rta asrlar davri nechanchi asrlarni o‘z ichiga oladi?", a: "XV – XVII asrning birinchi yarmini"},
+            {q: "Ilk o‘rta asrlar nechanchi asrlarni o‘z ichiga oladi?", a: "V - XI asr o‘rtalari"},
+            {q: "Xalqlarning buyuk ko‘chishini qaysi qabila birinchi bo‘lib boshlab bergan?", a: "xunnlar"},
+            {q: "Ostgotlar Rim imperiyasining qaysi provinsiyasini bosib olganlar?", a: "Italiyani"},
+            {q: "Angl-sakslar qayerda o‘rnashib olganlar?", a: "Britaniyada"},
+            {q: "Rim chegarasiga tutash hududlarda yashagan varvarlar nechta guruhga bo‘linganlar?", a: "uchta"},
+            {q: "Germanlar to‘g‘risidagi ilk xabar kim tomonidan beriladi?", a: "Pifiy tomonidan"},
+            {q: "Markoman urushlari nechanchi yillarda bo‘lib o‘tgan?", a: "166—180 yillarda"},
+            {q: "Vestgotlar qirolligi kimlar tomonidan tugatilgan?", a: "arablar tomonidan"},
+            {q: "Yevropada vujudga kelgan soʻnggi varvar qirolligini aniqlang?", a: "Langobardlar qirolligi"},
+            {q: "german qabilalari qanday nom bilan atalgan?", a: "federat"},
+            {q: "“Tabiiy tarix” asarining muallifini aniqlang?", a: "Katta Pliniy"},
+            {q: "“Galliya urushi to‘g‘risidagi yozishmalar” muallifi?", a: "Gay Yuliy Sezar"},
+            {q: "Imperator Gonoriy qachon burgundlarni federat sifatida tan olgan?", a: "413 yilda"},
+            {q: "357 yili Argentorat jangida tor-mor etilgan qabila?", a: "alemannlar"},
+            {q: "477 yilda vandallarni Sitsiliyadan haydab chiqargan qo'mondon?", a: "Odoakr"},
+            {q: "Xlodvig qachon Galliyani bosib olgan?", a: "486 yilda"},
+            {q: "Qirol Xilperik qanday qonunni chiqargan?", a: "«Allod qonuni»"},
+            {q: "Sali urug‘i yetakchisi Meroveyning poytaxti?", a: "Turna"},
+            {q: "Fransiya qirollarining geraldik ramzi?", a: "nilufar guli"},
+            {q: "“Sali haqiqati necha tituldan iborat?", a: "65 tituldan"},
+            {q: "Franklar jamiyatida yarim erkin kishilar?", a: "lit"},
+            {q: "Antrustionlarning vergeldini aniqlang?", a: "600 solid"},
+            {q: "“Yalqov qirollar” davri?", a: "639—751 yillarga"},
+            {q: "Merovinglar saroyining bosh ish yurituvchi?", a: "Mayordam"},
+            {q: "Graflarning yordamchisi?", a: "vikariy"},
+            {q: "Xlodvig qaysi shaharda xristianlikni qabul qilgan?", a: "Reyms"},
+            {q: "Avstraziyaning Pipinlar uyidan chiqqan mayordami?", a: "Pipin II Geristalskiy"},
+            {q: "Karl Martellning hukmronlik yillari?", a: "717—741 yillar"},
+            {q: "Franklar davlatida feodal mulki?", a: "domen"},
+            {q: "Buyuk Karl necha yil boshqargan?", a: "46 yil"},
+            {q: "Avar hoqonligi o'rnida qanday birlik tuzilgan?", a: "Sharqiy marka"},
+            {q: "Dezideriyga qarshi yurishga chiqqan Papa?", a: "Adrianning"},
+            {q: "Karlga qarshi kurashgan saks yo‘lboshchisi?", a: "Vidukind"},
+            {q: "Karlning sakslarga qarshi yurishi qachon boshlangan?", a: "772 yilda"},
+            {q: "Tassilon III kim bo‘lgan?", a: "Bavariya gersogi"},
+            {q: "Lyudovik Nemisga qaysi yerlar berilgan?", a: "Frankoniya, Saksoniya, Allemaniya va boshq."},
+            {q: "O‘rta Frank davlati qachon uchga bo‘lingan?", a: "855 yilda"},
+            {q: "Buyuk Karl o‘limidan keyin taxtga kim o‘tirdi?", a: "Lyudovik Oliyjanob"},
+            {q: "Avar yerlarini keyinchalik kimlar egallagan?", a: "mojorlar tomonidan"},
+            {q: "Graf Rolandning basklar bilan to‘qnashuvi?", a: "Ronsevalda"},
+            {q: "Karlning Ispaniyaga yurishi paytida Qurdoba amiri?", a: "Abdurahmon"},
+            {q: "Lotarga qaysi yerlar berilgan?", a: "Italiya, Provans, Lotaringiya va boshq."},
+            {q: "Angliyadagi «yetti qirollik davri»?", a: "geptarxiya"},
+            {q: "871—899 yillarda Angliya qiroli?", a: "Alfred"},
+            {q: "Rim legionlari Britaniyadan qachon chiqib ketgan?", a: "407 yilda"},
+            {q: "120 akr necha gektar?", a: "50 gektar"},
+            {q: "Angliyada urug‘-qabila oqsuyaklari?", a: "erl"},
+            {q: "jamoa huquqi bo‘yicha oila yeri?", a: "folklend"},
+            {q: "Sosoniylarning soʻnggi hukmdori?", a: "Yazdigard III"},
+            {q: "Hijrat nechanchi yilda sodir boʻlgan?", a: "622 yilda"},
+            {q: "Hijriy kalendarni kim joriy etgan?", a: "xalifa Umar"},
+            {q: "Guptalar davlatining poytaxti?", a: "Pataliputra"},
+            {q: "Taniqli hind matematigi?", a: "Aryabxata"},
+            {q: "Suy imperatori Yan Guan kimga qarshi 3 marta yurish qilgan?", a: "Koguryoga"},
+            {q: "Tan imperiyasiga kim asos solgan?", a: "Li Yuan"},
+            {q: "Ratusha nima?", a: "shahar kengashi binosi"},
+            {q: "Yevropada shahar boshligʻi?", a: "mer"},
+            {q: "Namunali ish nima deb ataladi?", a: "shedevr"},
+            {q: "Birinchi banklar qayerda paydo boʼldi?", a: "Lombardiyada"},
+            {q: "Ispaniyadagi inkvizitsiya?", a: "autodafe"},
+            {q: "Inkvizitsiya qaysi papa davrida joriy etildi?", a: "Innokentiy III davrida"},
+            {q: "Salib yurishini boshlagan Papa?", a: "Urban II"},
+            {q: "Ioanniylar ordenining boshqa nomi?", a: "gospitalyerlar"},
+            {q: "Gastings jangi vaqtidagi Angliya qiroli?", a: "Garold"},
+            {q: "Ilk bor aholi roʻyxatini oʼtkazgan qirol?", a: "Vilgelm I"},
+            {q: "Filipp IV qaysi Rim papasi bilan kurashgan?", a: "Bonifatsiy VIII bilan"},
+            {q: "Kapetinglar xonadonining vorisi?", a: "valualar"},
+            {q: "Kanossa qasri oldida kechirim soʼragan qirol?", a: "Genrix IV"},
+            {q: "Germaniyada tabaqaviy-vakillik mahkamasi?", a: "Landtag"},
+            {q: "Arablardan qaytarib olinishi?", a: "rekonkista"},
+            {q: "Xristianlikka oʻgirilgan mavrlar?", a: "moriskalar"},
+            {q: "Xristianlikka oʻtkazilgan yahudiylar?", a: "marranlar"},
+            {q: "Aleksandr Nevskiy qayerda knyazlik qilgan?", a: "Novgorodda"},
+            {q: "Kulikovo jangida Oltin Oʻrda qoʻshini boshlig'i?", a: "Mamay"},
+            {q: "Saljuqiylar davlatiga kim asos solgan?", a: "Toʻgʻrulbek"},
+            {q: "«Ikki muqaddas shahar xizmatchisi» unvonini olgan sulton?", a: "Salim I"},
+            {q: "«Chingiz» soʻzining lugʻaviy maʼnosi?", a: "kuchli"},
+            {q: "Botuxon asos solgan davlat ruscha nomi?", a: "Oltin Oʻrda"},
+            {q: "Xubilayxonning Xitoydagi sulolasi?", a: "Yuan"},
+            {q: "Dehli sultonligining asoschisi?", a: "Qutbiddin Oybek"},
+            {q: "Paolo Toskanelli necha km adashgan edi?", a: "13000 km"},
+            {q: "«Amerika» deb atalgan birinchi globus qachon?", a: "1515 yili Germaniyada"},
+            {q: "Lordlar dehqonlarni yerdan mahrum etishi?", a: "gʻov tutish"},
+            {q: "Dengiz qaroqchiligidan boshlagan admiral?", a: "Frensis Dreyk"},
+            {q: "Karl IX diniy urushlarni toʻxtatish uchun nima qildi?", a: "Genrix Burbonga singlisi Margaritani uzatdi"},
+            {q: "Nant edikti qachon imzolangan?", a: "1598 yilda"},
+            {q: "Martin Lyuterning xitobnomasi?", a: "95 tezis"},
+            {q: "Rossiyada oprichnina qachon joriy etilgan?", a: "1565 yilda"},
+            {q: "1445 yilda?", a: "I. Gutenberg birinchi bosma kitobni nashr etdi"},
+            {q: "Dojlar saroyi qaysi shaharda?", a: "Venetsiya"},
+            {q: "Yevropada Bibi Maryam haykallari?", a: "Madonna"},
+            {q: "1918-1939 yillar davri necha bosqich?", a: "3"},
+            {q: "Millatlar ittifoqi qachon tuzildi?", a: "1919"},
+            {q: "Versal konferensiyasi qachon?", a: "1919-1920"},
+            {q: "Vashington konferensiyasi qachon?", a: "1921—1922"},
+            {q: "Vashington sistemasi qaysi davlat manfaatida?", a: "AQSh"},
+            {q: "Myunxenda shartnomasi qachon?", a: "1938"},
+            {q: "Sovet-German yashirin protokoli?", a: "Polsha taqsimlab olinishi"},
+            {q: "1945-2024 jahon tarixi 2-qismi necha davr?", a: "3"},
+            {q: "“Sovuq urush” qachon boshlandi?", a: "1946"},
+            {q: "1952 yilgi AQSH saylovlarida kim g‘olib?", a: "D. Eyzenxauer"},
+            {q: "Karib krizisi qachon bo’ldi?", a: "1962"},
+            {q: "D.Marshall rejasi nima?", a: "Yevropaga yordam berish dasturi"},
+            {q: "D.Marshall rejasi qachondan kuchga kirgan?", a: "1948"},
+            {q: "Shanxay hamkorlik tashkiloti (ShHT)?", a: "mintaqaviy xavfsizlik va iqtisodiy hamkorlik"},
+            {q: "SSSRning tarqab ketishi?", a: "1991"},
+            {q: "V. Putin qaysi yildan prezident?", a: "2000-yil"},
+            {q: "1968 yilgi AQSH saylovlarida g‘olib?", a: "R. Nikson"},
+            {q: "Oʻzbekiston ShHTga qachon qoʻshilgan?", a: "2001"},
+            {q: "Yevropa Ittifoqi shartnomasi qachon?", a: "1993"},
+            {q: "GFR qachon tashkil topgan?", a: "1949"},
+            {q: "1989 yilgi AQSH saylovlarida g‘olib?", a: "J. Bush"},
+            {q: "“Qayta qurish” siyosati boshlanishi?", a: "1985"},
+            {q: "Shengen shartnomasi qachon?", a: "1995"},
+            {q: "MDHga qancha davlat kirgan?", a: "11 (faylda 9 deb belgilangan, lekin aslida ko'proq)"},
+            {q: "Ikkinchi jahon urushidan keyin eng boy mamlakat?", a: "AQSH"},
+            {q: "D. Eyzenxauer qaysi partiya vakili?", a: "respublikachilar"},
+            {q: "Urushdan keyin qaysi pul xalqaro valyuta bo'ldi?", a: "Dollar"},
+            {q: "“Rivojlangan sotsializm” davri?", a: "1964-1985"},
+            {q: "Sovet Ittifoqi parchalana boshlagan sana?", a: "1991-yilning 19-avgusti"},
+            {q: "AQSH Prezident B.Obama davri?", a: "2009-2017"},
+            {q: "1976 yilgi AQSH saylovlarida g‘olib?", a: "J. Karter"},
+            {q: "NATOning vujudga kelishi?", a: "1949"},
+            {q: "J. Ford prezidentligi davri?", a: "1974-1976"},
+            {q: "Xitoy Xalq Respublikasining shakllanishi?", a: "1949"},
+            {q: "1980 yilgi AQSH saylovlarida g‘olib?", a: "R. Reygan"},
+            {q: "Isroil iqtisodi qachondan jadal rivojlandi?", a: "1990-yillar"},
+            {q: "Isroil xo‘jaligi qaysi modelga moslashdi?", a: "AQSH va G‘arbiy Yevropa"},
+            {q: "1990-yillari SSSRdan Isroilga qancha kishi keldi?", a: "600 ming"},
+            {q: "Isroilning qiyofasini kimlar o‘zgartirdi?", a: "yangi immigrantlar"},
+            {q: "Isroil va Falastin rejasi arablar rad etgan yil?", a: "1947-yili"},
+            {q: "Falastin xalqining kurashi boshlangan yil?", a: "1948-yili"},
+            {q: "Falastin kurashini qo'llaganlar?", a: "Sobiq Ittifoq, Y.Arofat, arab davlatlari"},
+            {q: "FATXga uzoq yillar kim boshchilik qildi?", a: "Yosir Arofat"},
+            {q: "Falastin muammosini hal qilish imkoni paydo bo'ldi?", a: "1990-yillar"},
+            {q: "Yaqin Sharq bo‘yicha xalqaro konferensiya qayerda?", a: "Madridda"},
+            {q: "Muzokaralar boshlangan Oslo shahri qaysi davlat?", a: "Norvegiya"},
+            {q: "Isroil va FATX bir-birini tan olgan yil?", a: "1993-yili"},
+            {q: "Falastin avtonomiyasi kelishuvi imzolangan joy?", a: "Vashingtonda (1993)"},
+            {q: "Avtonomiya necha yil ichida amalga oshishi kerak edi?", a: "5 yil"},
+            {q: "Y. Arofat kimlar tomonidan o'limga hukm qilindi?", a: "ekstremistlar"},
+            {q: "Taqiqlangan radikal islom tashkilotlari?", a: "Xamas, Jihod, Hizbulloh"},
+            {q: "Ekstremistlar o'limga hukm qilgan bosh vazir?", a: "Isxak Rabin"},
+            {q: "BMT Falastin bo'yicha rezolyutsiya qabul qildi?", a: "1947-yili"},
+            {q: "600 ming kishining kelishi qachon rivojlanish berdi?", a: "1990-yillari"},
+            {q: "FATX va Isroil muvaqqat kelishuvi?", a: "1995-yillari"},
+            {q: "Qaysi daryoning g‘arbiy sohili o'tkazildi?", a: "Iordan daryosi"},
+            {q: "Falastinga nisbatan qat’iy yo’nalish tarafdori?", a: "Binyamin Netanyaxu"}
+        ];
+
+        let currentIndex = 0;
+
+        function updateCard() {
+            document.getElementById('card').classList.remove('flipped');
+            setTimeout(() => {
+                document.getElementById('question').innerText = data[currentIndex].q;
+                document.getElementById('answer').innerText = data[currentIndex].a;
+                document.getElementById('counter').innerText = `Savol: ${currentIndex + 1} / ${data.length}`;
+            }, 150);
+        }
+
+        function flipCard() {
+            document.getElementById('card').classList.toggle('flipped');
+        }
+
+        function next() {
+            if (currentIndex < data.length - 1) {
+                currentIndex++;
+                updateCard();
+            }
+        }
+
+        function prev() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCard();
+            }
+        }
+
+        function jumpTo() {
+            const num = document.getElementById('qNum').value;
+            if (num > 0 && num <= data.length) {
+                currentIndex = num - 1;
+                updateCard();
+            }
+        }
+
+        updateCard();
+    </script>
+</body>
+</html>
